@@ -1,0 +1,5 @@
+<server>
+    <id>sonar</id>
+    <username>admin</username>
+    <password>admin</password>
+</server>
