@@ -9,7 +9,14 @@ jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
-    
+
+    services:
+      sonarqube:
+        image: sonarqube:latest
+        ports:
+          - 9000:9000
+        options: --health-cmd='curl -f http://localhost:9000 || exit 1' --health-interval=10s --health-timeout=5s --health-retries=10
+
     steps:
       - name: Check out the code
         uses: actions/checkout@v4
@@ -20,7 +27,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.
+          distribution: 'zulu'
       
       - name: Cache SonarQube packages
         uses: actions/cache@v4
@@ -39,12 +46,15 @@ jobs:
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # Token de autenticación para SonarQube
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}  # URL de tu servidor SonarQube
         run: |
+          # Esperar que SonarQube esté listo
+          until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; do
+            echo "Esperando que SonarQube esté listo..."
+            sleep 5
+          done
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=JhonmySoftware_TestAutomotionSonar_22e9b4a7-87b4-47ea-882f-45a187ffdc27 \
             -Dsonar.projectName='TestAutomotionSonar' \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.sources=src \
-            -Dsonar.java.binaries=target/classes  # Asegúrate de que esta ruta sea correcta para tu proyecto
+            -Dsonar.host.url=http://localhost:9000 \
+            -Dsonar.login=admin \
+            -Dsonar.password=admin
