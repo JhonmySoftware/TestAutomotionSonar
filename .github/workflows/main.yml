@@ -12,10 +12,9 @@ jobs:
 
     services:
       sonarqube:
-        image: sonarqube:latest
+        image: sonarqube:9.9-community  # Versión específica de SonarQube
         ports:
           - 9000:9000
-        options: --health-cmd='curl -f http://localhost:9000 || exit 1' --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
       - name: Check out the code
@@ -43,15 +42,17 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       
-      - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # Token de autenticación para SonarQube
+      - name: Esperar SonarQube
         run: |
-          # Esperar que SonarQube esté listo
           until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; do
             echo "Esperando que SonarQube esté listo..."
             sleep 5
           done
+
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # Token de autenticación para SonarQube
+        run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=JhonmySoftware_TestAutomotionSonar_22e9b4a7-87b4-47ea-882f-45a187ffdc27 \
             -Dsonar.projectName='TestAutomotionSonar' \
